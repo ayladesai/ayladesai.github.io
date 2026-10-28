@@ -140,8 +140,8 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 .fact:hover::after, .fact:hover::before, .fact:focus-within::after, .fact:focus-within::before { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .fact::after, .fact::before { transition: none; } }
-/* Touch screens have no hover: show the label inside the card instead */
-@media (hover: none) {
+/* Touch-only devices have no hover: show the label inside the card instead */
+@media (any-hover: none) {
   .fact::after, .fact::before { display: none; }
   .fl { position: static; width: auto; height: auto; overflow: visible; clip: auto; font-size: 0.76rem; font-weight: 500; color: var(--muted); }
 }
