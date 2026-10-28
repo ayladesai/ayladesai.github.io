@@ -240,11 +240,16 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 .media .span { grid-column: 1 / -1; }
 .media video { width: 100%; }
 .media .model3d { position: relative; aspect-ratio: 16 / 10; display: grid; place-items: center; cursor: grab; touch-action: pan-y; }
+/* Mid-gray studio backdrop so dark seals and bright metal both stand out */
+.media .ph.model3d { background: radial-gradient(ellipse at 50% 42%, #61666d 0%, #3d4146 55%, #26282c 100%); }
+.media .model3d .model-msg { color: #d6d8dc; }
 .media .model3d:active { cursor: grabbing; }
 .media .model3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .model-msg { margin: 0; font-size: 0.9rem; color: var(--muted); }
-.model-btn { position: absolute; top: 12px; right: 12px; z-index: 2; padding: 8px 14px; border: 1px solid var(--rule); border-radius: 999px; background: var(--bg); color: var(--fg); font: 500 0.88rem/1 var(--f); cursor: pointer; transition: border-color .15s, color .15s; }
+.model-tools { position: absolute; top: 12px; right: 12px; z-index: 2; display: flex; gap: 8px; }
+.model-btn { padding: 8px 14px; border: 1px solid var(--rule); border-radius: 999px; background: var(--bg); color: var(--fg); font: 500 0.88rem/1 var(--f); cursor: pointer; transition: border-color .15s, color .15s; }
 .model-btn:hover, .model-btn:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+.model-btn[aria-pressed="true"] { border-color: var(--accent); }
 .model-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .model-lbl { position: absolute; left: 0; top: 0; padding: 3px 7px; border: 1px solid var(--rule); border-radius: 6px; background: color-mix(in srgb, var(--bg) 85%, transparent); color: var(--fg); font-size: 0.74rem; font-weight: 550; line-height: 1.2; white-space: nowrap; opacity: 0; }
 .model-lbl::after { content: ""; position: absolute; background: var(--muted); }
@@ -252,7 +257,7 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 .model-lbl[data-side="below"]::after { left: 50%; bottom: 100%; width: 1px; height: var(--lead); }
 .model-lbl[data-side="left"]::after { top: 50%; left: 100%; height: 1px; width: var(--lead); }
 .model-lbl[data-side="right"]::after { top: 50%; right: 100%; height: 1px; width: var(--lead); }
-@media (max-width: 560px) { .model-lbl { padding: 2px 4px; font-size: 0.6rem; } .model-btn { top: 8px; right: 8px; padding: 6px 11px; font-size: 0.8rem; } }
+@media (max-width: 560px) { .model-lbl { padding: 2px 4px; font-size: 0.6rem; } .model-tools { top: 8px; right: 8px; gap: 6px; } .model-btn { padding: 6px 11px; font-size: 0.8rem; } }
 .zoom { cursor: zoom-in; }
 .media.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .media.six .s2 { grid-column: span 2; }
@@ -319,7 +324,7 @@ dialog.lb button { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)
 <p><strong>Current progress:</strong> Gone through a preliminary design review addressing potential improvements to last year's design including modifying reservoir geometry, fluid port systems, and cylinder mechanical advantage. Tested a new dual port design through modifying last year's masters and showed reduced fluid leakage through the front seals of the master cylinder (seen in the image through the use of UV brake fluid dye). Modified the piston/pushrod stack-up to increase serviceability and decrease seal damage when assembling. Increased the force amplification from 16.739 in the Front and 8.370 in the Rear to 31.154 in the Front and 15.577 in the Rear.</p>
     </div>
     <div class="media two">
-<figure class="span"><div class="ph model3d" id="mc-model" data-src="../assets/models/master-cylinder.glb"><p class="model-msg">Loading 3D model&hellip;</p></div><figcaption>3D model &mdash; drag to rotate, or press Explode to see the parts</figcaption></figure>
+<figure class="span"><div class="ph model3d" id="mc-model" data-src="../assets/models/master-cylinder.glb"><p class="model-msg">Loading 3D model&hellip;</p></div><figcaption>3D model &mdash; drag to rotate; Section cuts it in half, Explode pulls the parts apart</figcaption></figure>
 <figure><div class="ph"><img class="zoom" src="../assets/img/mc-dual-port.jpg" width="1350" height="1800" alt="Dual port modification" loading="lazy"></div><figcaption>Dual port modification</figcaption></figure>
 <figure><div class="ph"><img class="zoom" src="../assets/img/mc-single-port.jpg" width="1350" height="1800" alt="Single port" loading="lazy"></div><figcaption>Single port</figcaption></figure>
     </div>
@@ -435,12 +440,12 @@ const PARTS = [
   ['Fluid', 'Fluid bolt', 'steel', { up: 80, side: 'left', lead: 18 }],
 ];
 const MATERIALS = {
-  aluminum: { color: 0xd0d3d8, metalness: 1, roughness: 0.42 },
-  steel: { color: 0xa9adb3, metalness: 1, roughness: 0.3 },
-  spring: { color: 0x8a9096, metalness: 1, roughness: 0.35 },
-  darkSteel: { color: 0x2c2d30, metalness: 0.7, roughness: 0.45 },
-  rubber: { color: 0x161616, metalness: 0, roughness: 0.75 },
-  copper: { color: 0xc27a4a, metalness: 1, roughness: 0.32 },
+  aluminum: { color: 0xe4e6ea, metalness: 1, roughness: 0.3, envMapIntensity: 1.25 },              // satin machined aluminum
+  steel: { color: 0xc6cad0, metalness: 1, roughness: 0.18, envMapIntensity: 1.3 },                 // polished/zinc-plated steel
+  spring: { color: 0x9da3aa, metalness: 1, roughness: 0.24, envMapIntensity: 1.2 },
+  darkSteel: { color: 0x34363a, metalness: 0.85, roughness: 0.38, envMapIntensity: 1.1 },          // black-oxide spring steel
+  rubber: { color: 0x141414, metalness: 0, roughness: 0.62, clearcoat: 0.15, clearcoatRoughness: 0.6 },
+  copper: { color: 0xd98f5f, metalness: 1, roughness: 0.22, clearcoat: 0.4, clearcoatRoughness: 0.2, envMapIntensity: 1.25 },
 };
 const GAP = 14;   // mm between parts pulled out of the bore
 const TIERS = [['above', 16], ['below', 16], ['above', 42], ['below', 42]];   // bore labels cycle through these
@@ -453,23 +458,60 @@ async function init() {
   const THREE = await import('three');
   const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
   const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
-  const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
   const { toCreasedNormals } = await import('three/addons/utils/BufferGeometryUtils.js');
   const gltf = await new GLTFLoader().loadAsync(box.dataset.src);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true });
+  renderer.localClippingEnabled = true;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;   // softer highlight roll-off on metal
+  renderer.toneMappingExposure = 1.0;
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', 'Interactive 3D model of the master cylinder');
   const labels = document.createElement('div'); labels.className = 'model-labels'; labels.setAttribute('aria-hidden', 'true');
-  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'model-btn'; btn.textContent = 'Explode'; btn.setAttribute('aria-pressed', 'false');
+  const tools = document.createElement('div'); tools.className = 'model-tools';
+  const button = text => { const b = document.createElement('button'); b.type = 'button'; b.className = 'model-btn'; b.textContent = text; b.setAttribute('aria-pressed', 'false'); tools.append(b); return b; };
+  const sectionBtn = button('Section'), btn = button('Explode');
   box.textContent = '';
-  box.append(renderer.domElement, labels, btn);
+  box.append(renderer.domElement, labels, tools);
+
+  // Section view: everything on the camera side of this plane is cut away (x > constant)
+  const clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 1e4);
+  // Diagonal hatching for cut faces, like a CAD section; neighbouring parts alternate direction
+  const hatch = flip => {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 32, 32);
+    g.strokeStyle = '#7a7f86'; g.lineWidth = 3;
+    if (flip) { g.translate(32, 0); g.scale(-1, 1); }
+    g.beginPath(); g.moveTo(-8, 40); g.lineTo(40, -8); g.moveTo(-8, 8); g.lineTo(8, -8); g.moveTo(24, 40); g.lineTo(40, 24); g.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(300, 300);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+  const hatches = [hatch(false), hatch(true)];
+  const capGeo = new THREE.PlaneGeometry(1000, 1000).rotateY(Math.PI / 2);   // faces +X, in the cut plane
 
   const scene = new THREE.Scene();
-  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-  const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(1, 1.5, 0.8); scene.add(key);
+  // Studio reflections: a neutral gray room with softboxes above, to both sides and in front,
+  // so upright walls catch highlights as well as top faces
+  const studio = new THREE.Scene();
+  studio.background = new THREE.Color(0x2b2e33);
+  const softbox = (w, h, power, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 1, 1).multiplyScalar(power), side: THREE.DoubleSide }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); studio.add(m);
+  };
+  softbox(8, 4, 2.0, 0, 6, 0);
+  softbox(2.4, 7, 2.6, -6, 1, 1);
+  softbox(2.4, 7, 2.6, 6, 1, -1);
+  softbox(7, 1.6, 1.4, 0, 0.5, 6);
+  softbox(5, 2, 1.6, 0, 2, -6);
+  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(studio, 0.03).texture;
+  // Key light for highlights, plus a cool rim light from behind to outline edges
+  const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(1, 1.5, 0.8); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xdfe8ff, 1.2); rim.position.set(-1.2, 0.8, -1); scene.add(rim);
 
   // Build one mesh per part, with smooth curved faces but crisp CAD edges
   const parts = [];
@@ -479,9 +521,36 @@ async function init() {
     const geo = toCreasedNormals(o.geometry, Math.PI / 6);
     geo.computeBoundingBox();
     // Double-sided so parts exported with inside-out faces still shade correctly
-    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ ...MATERIALS[def[2]], side: THREE.DoubleSide }));
+    const mat = MATERIALS[def[2]];
+    const mesh = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ ...mat, side: THREE.DoubleSide, clippingPlanes: [clipPlane] }));
+    mesh.renderOrder = 1000;
     scene.add(mesh);
-    const part = { mesh, label: def[1], cfg: def[3], box: geo.boundingBox.clone(), offset: new THREE.Vector3(), side: def[3].side || 'above', lead: def[3].lead || 16, el: null };
+
+    // Section caps (stencil technique): count this part's back minus front faces behind the cut plane;
+    // where the count is non-zero the plane is inside the solid, so draw the hatched cap there
+    const i = parts.length;
+    const stencilMat = side => new THREE.MeshBasicMaterial({
+      side, depthWrite: false, depthTest: false, colorWrite: false, clippingPlanes: [clipPlane],
+      stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc,
+      stencilFail: side === THREE.BackSide ? THREE.IncrementWrapStencilOp : THREE.DecrementWrapStencilOp,
+      stencilZFail: side === THREE.BackSide ? THREE.IncrementWrapStencilOp : THREE.DecrementWrapStencilOp,
+      stencilZPass: side === THREE.BackSide ? THREE.IncrementWrapStencilOp : THREE.DecrementWrapStencilOp,
+    });
+    const stencil = new THREE.Group();
+    [THREE.BackSide, THREE.FrontSide].forEach(s => { const m = new THREE.Mesh(geo, stencilMat(s)); m.renderOrder = i + 1; stencil.add(m); });
+    stencil.visible = false;
+    mesh.add(stencil);
+    const cap = new THREE.Mesh(capGeo, new THREE.MeshBasicMaterial({
+      color: mat.color, map: hatches[i % 2], toneMapped: false,
+      stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc,
+      stencilFail: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp, stencilZPass: THREE.ReplaceStencilOp,
+    }));
+    cap.renderOrder = i + 1.1;
+    cap.onAfterRender = r => r.clearStencil();
+    cap.visible = false;
+    scene.add(cap);
+
+    const part = { mesh, stencil, cap, label: def[1], cfg: def[3], box: geo.boundingBox.clone(), offset: new THREE.Vector3(), side: def[3].side || 'above', lead: def[3].lead || 16, el: null };
     if (def[1]) { part.el = document.createElement('span'); part.el.className = 'model-lbl'; part.el.textContent = def[1]; labels.append(part.el); }
     parts.push(part);
   });
@@ -540,14 +609,17 @@ async function init() {
   controls.autoRotateSpeed = 1.2;
   controls.addEventListener('start', () => { controls.autoRotate = false; });
   const dir = new THREE.Vector3(1, 0.45, 0.3).normalize();
-  const SIDE_VIEW = new THREE.Vector3(1, 0.3, 0.15).normalize();   // exploded parts read left to right
+  const SIDE_VIEW = new THREE.Vector3(1, 0.3, 0.15).normalize();   // parts read left to right, cut face toward the viewer
   const fromDir = new THREE.Vector3(), toDir = new THREE.Vector3();
+  const ease = x => x * x * (3 - 2 * x);
 
-  // t runs 0 (assembled) -> 1 (exploded); frame the camera to match
-  let t = 0, goal = 0;
-  const frame = animating => {
-    const e = t * t * (3 - 2 * t);
-    if (animating) dir.copy(fromDir).lerp(toDir, goal ? e : 1 - e).normalize();
+  // t: 0 assembled -> 1 exploded. s: 0 whole -> 1 sectioned. swing: camera turning toward the side view.
+  let t = 0, goal = 0, s = 0, sGoal = 0, swing = 1;
+  const cutX = (parts.find(p => p.label === 'Piston') || housing).box.getCenter(new THREE.Vector3()).x;
+  const clearX = fit[0].max.x + 1;
+  const frame = () => {
+    const e = ease(t);
+    if (swing < 1) dir.copy(fromDir).lerp(toDir, ease(swing)).normalize();
     else if (camera.position.distanceToSquared(controls.target) > 0) dir.copy(camera.position).sub(controls.target).normalize();
     const center = fit[0].getCenter(new THREE.Vector3()).lerp(fit[1].getCenter(new THREE.Vector3()), e);
     const dist = THREE.MathUtils.lerp(spinDistance(fit[0], dir), fitDistance(fit[1], dir), e);
@@ -555,15 +627,29 @@ async function init() {
     camera.position.copy(center).addScaledVector(dir, dist);
     parts.forEach(p => p.mesh.position.copy(p.offset).multiplyScalar(e));
   };
+  const section = () => {
+    clipPlane.constant = THREE.MathUtils.lerp(clearX, cutX, ease(s));
+    parts.forEach(p => { p.stencil.visible = p.cap.visible = s > 0; p.cap.position.x = clipPlane.constant; });
+  };
+  const toSideView = () => {
+    fromDir.copy(camera.position).sub(controls.target).normalize();
+    toDir.copy(SIDE_VIEW);
+    swing = reduced ? 1 : 0;
+    if (reduced) dir.copy(SIDE_VIEW);
+    controls.autoRotate = false;
+  };
   btn.addEventListener('click', () => {
     goal = goal ? 0 : 1;
     btn.textContent = goal ? 'Assemble' : 'Explode';
     btn.setAttribute('aria-pressed', String(!!goal));
-    // Swing to a side view while exploding; assembling keeps whatever angle the viewer chose
-    fromDir.copy(camera.position).sub(controls.target).normalize();
-    toDir.copy(goal ? SIDE_VIEW : fromDir);
-    if (goal) controls.autoRotate = false;
-    if (reduced) { t = goal; frame(true); }
+    if (goal) toSideView();   // assembling keeps whatever angle the viewer chose
+    if (reduced) { t = goal; frame(); }
+  });
+  sectionBtn.addEventListener('click', () => {
+    sGoal = sGoal ? 0 : 1;
+    sectionBtn.setAttribute('aria-pressed', String(!!sGoal));
+    if (sGoal) toSideView();
+    if (reduced) { s = sGoal; section(); frame(); }
   });
 
   const size = () => { const w = box.clientWidth, h = box.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); frame(); };
@@ -589,7 +675,12 @@ async function init() {
   renderer.setAnimationLoop(() => {
     const dt = clock.getDelta();
     if (!visible) return;
-    if (t !== goal) { t = goal > t ? Math.min(goal, t + dt / 1.1) : Math.max(goal, t - dt / 1.1); frame(true); }
+    const step = (x, to) => to > x ? Math.min(to, x + dt / 1.1) : Math.max(to, x - dt / 1.1);
+    let moved = false;
+    if (t !== goal) { t = step(t, goal); moved = true; }
+    if (swing < 1) { swing = step(swing, 1); moved = true; }
+    if (s !== sGoal) { s = step(s, sGoal); section(); }
+    if (moved) frame();
     controls.update();
     renderer.render(scene, camera);
     placeLabels();
