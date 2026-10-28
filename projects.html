@@ -241,8 +241,8 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 .media.six .s3 { grid-column: span 3; }
 .media.six .s6 { grid-column: span 6; }
 .media.six .s2 .ph > img, .media.six .s2 .ph > video { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
-.media.six .s3 .ph.render { aspect-ratio: 4 / 3; display: grid; place-items: center; }
-.media.six .s3 .ph.render img { max-height: 100%; width: auto; object-fit: contain; }
+.media.six .s3 .ph.render { aspect-ratio: 4 / 3; position: relative; }
+.media.six .s3 .ph.render img { position: absolute; inset: 12px; width: calc(100% - 24px); height: calc(100% - 24px); max-width: none; object-fit: contain; }
 @media (max-width: 520px) {
   .media.six { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .media.six .s2, .media.six .s3 { grid-column: span 1; }
