@@ -84,8 +84,12 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 .resume-dlg .rd-actions a { color: var(--muted); }
 .resume-dlg .rd-actions a:hover { color: var(--accent); }
 .resume-dlg .rd-close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--panel); color: var(--fg); font-size: 22px; line-height: 1; cursor: pointer; }
-.resume-dlg iframe { width: 100%; height: 100%; border: 0; background: #525659; }
-@media (max-width: 520px) { .resume-dlg .rd-actions a { display: none; } }
+.resume-dlg .rd-pages { min-height: 0; overflow: auto; display: grid; gap: 12px; align-content: start; padding: 12px; background: #525659; }
+.resume-dlg .rd-pages canvas { display: block; width: 100%; height: auto; background: #FFFFFF; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+.resume-dlg .rd-msg { margin: 0; padding: 24px; text-align: center; color: #FFFFFF; }
+.resume-dlg .rd-msg a { color: #FFFFFF; }
+@media (max-width: 700px) { dialog.resume-dlg { width: 100vw; height: 100dvh; max-width: none; max-height: none; border-radius: 0; } }
+@media (max-width: 520px) { .resume-dlg .rd-actions a:first-child { display: none; } }
 
 /* Banner */
 .banner { position: relative; background: var(--panel); }
@@ -338,7 +342,7 @@ dialog.lb button { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)
 <dialog class="resume-dlg" id="resume-dlg" aria-label="Resume">
   <div class="rd-in">
     <div class="rd-bar"><strong>Resume</strong><div class="rd-actions"><a href="https://docs.google.com/document/d/1zCwJLzRXkoDVdF37DxO-gHdB-Mg759LLa9-gzx_XW2g/view" target="_blank" rel="noopener">Open in Google Docs</a><a href="#" id="rd-download" download="Ayla-Desai-Resume.pdf">Download PDF</a><button type="button" class="rd-close" id="rd-close" aria-label="Close">&times;</button></div></div>
-    <iframe id="resume-frame" title="Resume"></iframe>
+    <div class="rd-pages" id="resume-pages" role="document" aria-label="Resume"></div>
   </div>
 </dialog>
 <dialog class="lb" id="lightbox" aria-label="Image">
@@ -366,14 +370,34 @@ dialog.lb button { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)
     document.addEventListener('click', e => { if (!menu.contains(e.target)) setOpen(false); });
     menu.addEventListener('keydown', e => { if (e.key === 'Escape') { setOpen(false); mbtn.focus(); } });
     menu.addEventListener('mouseleave', () => setOpen(false));
-    const rd = document.getElementById('resume-dlg'), frame = document.getElementById('resume-frame');
+    // Draw the PDF onto canvases with PDF.js so it shows in every browser, phones included.
+    const rd = document.getElementById('resume-dlg'), pages = document.getElementById('resume-pages');
+    const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+    let loaded = false;
+    const render = async pdf => {
+      if (!window.pdfjsLib) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js';
+      const doc = await pdfjsLib.getDocument(pdf).promise;
+      const w = pages.clientWidth - 24, dpr = window.devicePixelRatio || 1;
+      pages.textContent = '';
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const vp = page.getViewport({ scale: w * dpr / page.getViewport({ scale: 1 }).width });
+        const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+        pages.appendChild(c);
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+      }
+    };
     document.getElementById('resume-view').addEventListener('click', () => {
       setOpen(false);
       const pdf = menu.dataset.pdf;
-      const small = window.matchMedia('(max-width: 700px), (hover: none)').matches;
-      if (small || !rd.showModal) { window.open(pdf, '_blank'); return; }
-      if (!frame.getAttribute('src')) { frame.src = pdf + '#view=FitH'; document.getElementById('rd-download').href = pdf; }
+      if (!rd.showModal) { window.open(pdf, '_blank'); return; }
+      document.getElementById('rd-download').href = pdf;
       rd.showModal();
+      if (loaded) return;
+      loaded = true;
+      pages.innerHTML = '<p class="rd-msg">Loading&hellip;</p>';
+      render(pdf).catch(() => { loaded = false; pages.innerHTML = '<p class="rd-msg">Couldn&rsquo;t show the resume here. <a href="' + pdf + '" target="_blank" rel="noopener">Open the PDF</a></p>'; });
     });
     document.getElementById('rd-close').addEventListener('click', () => rd.close());
     rd.addEventListener('click', e => { if (e.target === rd) rd.close(); });
