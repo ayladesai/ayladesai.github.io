@@ -239,6 +239,20 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 .media figcaption { font-size: 0.88rem; color: var(--muted); font-style: italic; text-align: center; }
 .media .span { grid-column: 1 / -1; }
 .media video { width: 100%; }
+.media .model3d { position: relative; aspect-ratio: 16 / 10; display: grid; place-items: center; cursor: grab; touch-action: pan-y; }
+.media .model3d:active { cursor: grabbing; }
+.media .model3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.model-msg { margin: 0; font-size: 0.9rem; color: var(--muted); }
+.model-btn { position: absolute; top: 12px; right: 12px; z-index: 2; padding: 8px 14px; border: 1px solid var(--rule); border-radius: 999px; background: var(--bg); color: var(--fg); font: 500 0.88rem/1 var(--f); cursor: pointer; transition: border-color .15s, color .15s; }
+.model-btn:hover, .model-btn:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+.model-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.model-lbl { position: absolute; left: 0; top: 0; padding: 3px 7px; border: 1px solid var(--rule); border-radius: 6px; background: color-mix(in srgb, var(--bg) 85%, transparent); color: var(--fg); font-size: 0.74rem; font-weight: 550; line-height: 1.2; white-space: nowrap; opacity: 0; }
+.model-lbl::after { content: ""; position: absolute; background: var(--muted); }
+.model-lbl[data-side="above"]::after { left: 50%; top: 100%; width: 1px; height: var(--lead); }
+.model-lbl[data-side="below"]::after { left: 50%; bottom: 100%; width: 1px; height: var(--lead); }
+.model-lbl[data-side="left"]::after { top: 50%; left: 100%; height: 1px; width: var(--lead); }
+.model-lbl[data-side="right"]::after { top: 50%; right: 100%; height: 1px; width: var(--lead); }
+@media (max-width: 560px) { .model-lbl { padding: 2px 4px; font-size: 0.6rem; } .model-btn { top: 8px; right: 8px; padding: 6px 11px; font-size: 0.8rem; } }
 .zoom { cursor: zoom-in; }
 .media.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .media.six .s2 { grid-column: span 2; }
@@ -305,6 +319,7 @@ dialog.lb button { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)
 <p><strong>Current progress:</strong> Gone through a preliminary design review addressing potential improvements to last year's design including modifying reservoir geometry, fluid port systems, and cylinder mechanical advantage. Tested a new dual port design through modifying last year's masters and showed reduced fluid leakage through the front seals of the master cylinder (seen in the image through the use of UV brake fluid dye). Modified the piston/pushrod stack-up to increase serviceability and decrease seal damage when assembling. Increased the force amplification from 16.739 in the Front and 8.370 in the Rear to 31.154 in the Front and 15.577 in the Rear.</p>
     </div>
     <div class="media two">
+<figure class="span"><div class="ph model3d" id="mc-model" data-src="../assets/models/master-cylinder.glb"><p class="model-msg">Loading 3D model&hellip;</p></div><figcaption>3D model &mdash; drag to rotate, or press Explode to see the parts</figcaption></figure>
 <figure><div class="ph"><img class="zoom" src="../assets/img/mc-dual-port.jpg" width="1350" height="1800" alt="Dual port modification" loading="lazy"></div><figcaption>Dual port modification</figcaption></figure>
 <figure><div class="ph"><img class="zoom" src="../assets/img/mc-single-port.jpg" width="1350" height="1800" alt="Single port" loading="lazy"></div><figcaption>Single port</figcaption></figure>
     </div>
@@ -391,6 +406,195 @@ dialog.lb button { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)
   dlg.addEventListener('click', () => dlg.close());
   document.getElementById('lb-close').addEventListener('click', e => { e.stopPropagation(); dlg.close(); });
 })();
+</script>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<script type="module">
+// Interactive 3D viewer: loads three.js only when the model scrolls near the screen.
+const box = document.getElementById('mc-model');
+if (box) {
+  const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); init().catch(() => { box.innerHTML = '<p class="model-msg">Couldn&rsquo;t load the 3D model.</p>'; }); } }, { rootMargin: '300px' });
+  io.observe(box);
+}
+// Each part: [text in its file name, label (null = no label), material, how it moves when exploded].
+// "bore" parts slide out the back of the housing in order; "up" parts lift by that many mm.
+// side/lead place the label: which side of the part, and how many px away.
+const PARTS = [
+  ['MasterCylinderHousing', 'Housing', 'aluminum', { side: 'below', lead: 44 }],
+  ['MasterCylinderReservoir', 'Reservoir', 'aluminum', { up: 60, side: 'above', lead: 10 }],
+  ['MasterCylinderPushrod', 'Pushrod', 'steel', { bore: true }],
+  ['MasterCylinderPiston', 'Piston', 'aluminum', { bore: true }],
+  ['PistonEndCap', 'End cap', 'aluminum', { bore: true }],
+  ['PistonRetentionCap', 'Retention cap', 'aluminum', { bore: true }],
+  ['Spring', 'Return spring', 'spring', { bore: true }],
+  ['U-Cup', 'U-cup seal', 'rubber', { bore: true }],
+  ['O-Ring', 'O-ring', 'rubber', { bore: true }],
+  ['Retaining', 'Retaining ring', 'darkSteel', { bore: true }],
+  ['Washer-1', 'Washers', 'copper', { up: 14, side: 'left', lead: 18 }],
+  ['Banjo', 'Banjo', 'steel', { up: 34, side: 'left', lead: 18 }],
+  ['Washer-2', null, 'copper', { up: 54 }],
+  ['Fluid', 'Fluid bolt', 'steel', { up: 80, side: 'left', lead: 18 }],
+];
+const MATERIALS = {
+  aluminum: { color: 0xd0d3d8, metalness: 1, roughness: 0.42 },
+  steel: { color: 0xa9adb3, metalness: 1, roughness: 0.3 },
+  spring: { color: 0x8a9096, metalness: 1, roughness: 0.35 },
+  darkSteel: { color: 0x2c2d30, metalness: 0.7, roughness: 0.45 },
+  rubber: { color: 0x161616, metalness: 0, roughness: 0.75 },
+  copper: { color: 0xc27a4a, metalness: 1, roughness: 0.32 },
+};
+const GAP = 14;   // mm between parts pulled out of the bore
+const TIERS = [['above', 16], ['below', 16], ['above', 42], ['below', 42]];   // bore labels cycle through these
+const SIDES = {
+  above: l => `translate(-50%, calc(-100% - ${l}px))`, below: l => `translate(-50%, ${l}px)`,
+  left: l => `translate(calc(-100% - ${l}px), -50%)`, right: l => `translate(${l}px, -50%)`,
+};
+
+async function init() {
+  const THREE = await import('three');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+  const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+  const { toCreasedNormals } = await import('three/addons/utils/BufferGeometryUtils.js');
+  const gltf = await new GLTFLoader().loadAsync(box.dataset.src);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.domElement.setAttribute('role', 'img');
+  renderer.domElement.setAttribute('aria-label', 'Interactive 3D model of the master cylinder');
+  const labels = document.createElement('div'); labels.className = 'model-labels'; labels.setAttribute('aria-hidden', 'true');
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'model-btn'; btn.textContent = 'Explode'; btn.setAttribute('aria-pressed', 'false');
+  box.textContent = '';
+  box.append(renderer.domElement, labels, btn);
+
+  const scene = new THREE.Scene();
+  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+  const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(1, 1.5, 0.8); scene.add(key);
+
+  // Build one mesh per part, with smooth curved faces but crisp CAD edges
+  const parts = [];
+  gltf.scene.traverse(o => {
+    if (!o.isMesh) return;
+    const def = PARTS.find(p => o.name.includes(p[0])) || [null, o.name, 'aluminum', {}];
+    const geo = toCreasedNormals(o.geometry, Math.PI / 6);
+    geo.computeBoundingBox();
+    // Double-sided so parts exported with inside-out faces still shade correctly
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ ...MATERIALS[def[2]], side: THREE.DoubleSide }));
+    scene.add(mesh);
+    const part = { mesh, label: def[1], cfg: def[3], box: geo.boundingBox.clone(), offset: new THREE.Vector3(), side: def[3].side || 'above', lead: def[3].lead || 16, el: null };
+    if (def[1]) { part.el = document.createElement('span'); part.el.className = 'model-lbl'; part.el.textContent = def[1]; labels.append(part.el); }
+    parts.push(part);
+  });
+
+  // Exploded positions: stack bore parts behind the housing's open end (-Z), lift the rest
+  const housing = parts.find(p => p.label === 'Housing');
+  let cursor = (housing ? housing.box.min.z : 0) - GAP;
+  parts.filter(p => p.cfg.bore)
+    .sort((a, b) => b.box.getCenter(new THREE.Vector3()).z - a.box.getCenter(new THREE.Vector3()).z)
+    .forEach((p, i) => {
+      p.offset.z = cursor - p.box.max.z;
+      cursor = p.box.min.z + p.offset.z - GAP;
+      [p.side, p.lead] = TIERS[i % TIERS.length];
+    });
+  parts.forEach(p => {
+    if (p.cfg.up) p.offset.y = p.cfg.up;
+    if (p.el) { p.el.dataset.side = p.side; p.el.style.setProperty('--lead', p.lead + 'px'); }
+  });
+
+  const boxOf = exploded => {
+    const b = new THREE.Box3();
+    parts.forEach(p => b.union(p.box.clone().translate(exploded ? p.offset : new THREE.Vector3())));
+    // Leave room for labels: the banjo stack's labels sit off its +Z side, the top tier above everything
+    if (exploded) { b.max.z += 70; b.min.z -= 20; b.max.y += 18; b.min.y -= 18; }
+    return b;
+  };
+  const fit = [boxOf(false), boxOf(true)];
+  // Camera distance that fits a box in view when looking along dir
+  const fitDistance = (b, d) => {
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), d).normalize();
+    const up = new THREE.Vector3().crossVectors(d, right);
+    const c = b.getCenter(new THREE.Vector3()), p = new THREE.Vector3();
+    const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), tanH = tanV * camera.aspect;
+    let dist = 0;
+    for (let i = 0; i < 8; i++) {
+      p.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).sub(c);
+      const z = p.dot(d);
+      dist = Math.max(dist, z + Math.abs(p.dot(right)) / tanH, z + Math.abs(p.dot(up)) / tanV);
+    }
+    return dist * 1.06;
+  };
+  // The assembled model auto-rotates, so fit it from every angle around the vertical axis
+  const spinDistance = (b, d) => {
+    const q = new THREE.Quaternion(), r = new THREE.Vector3();
+    let dist = 0;
+    for (let k = 0; k < 12; k++) dist = Math.max(dist, fitDistance(b, r.copy(d).applyQuaternion(q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, k * Math.PI / 6))));
+    return dist;
+  };
+
+  const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.enableZoom = false;   // keep the mouse wheel scrolling the page
+  controls.enablePan = false;
+  controls.autoRotate = !reduced;
+  controls.autoRotateSpeed = 1.2;
+  controls.addEventListener('start', () => { controls.autoRotate = false; });
+  const dir = new THREE.Vector3(1, 0.45, 0.3).normalize();
+  const SIDE_VIEW = new THREE.Vector3(1, 0.3, 0.15).normalize();   // exploded parts read left to right
+  const fromDir = new THREE.Vector3(), toDir = new THREE.Vector3();
+
+  // t runs 0 (assembled) -> 1 (exploded); frame the camera to match
+  let t = 0, goal = 0;
+  const frame = animating => {
+    const e = t * t * (3 - 2 * t);
+    if (animating) dir.copy(fromDir).lerp(toDir, goal ? e : 1 - e).normalize();
+    else if (camera.position.distanceToSquared(controls.target) > 0) dir.copy(camera.position).sub(controls.target).normalize();
+    const center = fit[0].getCenter(new THREE.Vector3()).lerp(fit[1].getCenter(new THREE.Vector3()), e);
+    const dist = THREE.MathUtils.lerp(spinDistance(fit[0], dir), fitDistance(fit[1], dir), e);
+    controls.target.copy(center);
+    camera.position.copy(center).addScaledVector(dir, dist);
+    parts.forEach(p => p.mesh.position.copy(p.offset).multiplyScalar(e));
+  };
+  btn.addEventListener('click', () => {
+    goal = goal ? 0 : 1;
+    btn.textContent = goal ? 'Assemble' : 'Explode';
+    btn.setAttribute('aria-pressed', String(!!goal));
+    // Swing to a side view while exploding; assembling keeps whatever angle the viewer chose
+    fromDir.copy(camera.position).sub(controls.target).normalize();
+    toDir.copy(goal ? SIDE_VIEW : fromDir);
+    if (goal) controls.autoRotate = false;
+    if (reduced) { t = goal; frame(true); }
+  });
+
+  const size = () => { const w = box.clientWidth, h = box.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); frame(); };
+  new ResizeObserver(size).observe(box);
+  size();
+
+  const v = new THREE.Vector3(), clock = new THREE.Clock();
+  const placeLabels = () => {
+    const show = Math.max(0, (t - 0.85) / 0.15);
+    const w = box.clientWidth, h = box.clientHeight;
+    parts.forEach(p => {
+      if (!p.el) return;
+      p.el.style.opacity = show;
+      if (!show) return;
+      p.box.getCenter(v).add(p.mesh.position).project(camera);
+      p.el.style.visibility = v.z > 1 ? 'hidden' : 'visible';
+      p.el.style.transform = `translate(${(v.x + 1) / 2 * w}px, ${(1 - v.y) / 2 * h}px) ${SIDES[p.side](p.lead)}`;
+    });
+  };
+
+  let visible = true;
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(box);
+  renderer.setAnimationLoop(() => {
+    const dt = clock.getDelta();
+    if (!visible) return;
+    if (t !== goal) { t = goal > t ? Math.min(goal, t + dt / 1.1) : Math.max(goal, t - dt / 1.1); frame(true); }
+    controls.update();
+    renderer.render(scene, camera);
+    placeLabels();
+  });
+}
 </script>
 
 </body>
