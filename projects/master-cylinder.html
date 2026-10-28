@@ -243,10 +243,16 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 /* Mid-gray studio backdrop so dark seals and bright metal both stand out */
 .media .ph.model3d { background: radial-gradient(ellipse at 50% 42%, #61666d 0%, #3d4146 55%, #26282c 100%); }
 .media .model3d .model-msg { color: #d6d8dc; }
+.media .model3d:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; }
+.media .model3d:-webkit-full-screen { width: 100vw; height: 100vh; aspect-ratio: auto; }
+.media .model3d.is-full { position: fixed; inset: 0; z-index: 1000; aspect-ratio: auto; }
 .media .model3d:active { cursor: grabbing; }
 .media .model3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .model-msg { margin: 0; font-size: 0.9rem; color: var(--muted); }
 .model-tools { position: absolute; top: 12px; right: 12px; z-index: 2; display: flex; gap: 8px; }
+.model-zoom { position: absolute; left: 12px; top: 12px; z-index: 2; display: flex; gap: 6px; }
+.model-btn.model-icon { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; }
+.model-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .model-btn { padding: 8px 14px; border: 1px solid var(--rule); border-radius: 999px; background: var(--bg); color: var(--fg); font: 500 0.88rem/1 var(--f); cursor: pointer; transition: border-color .15s, color .15s; }
 .model-btn:hover, .model-btn:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
 .model-btn[aria-pressed="true"] { border-color: var(--accent); }
@@ -257,7 +263,7 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 .model-lbl[data-side="below"]::after { left: 50%; bottom: 100%; width: 1px; height: var(--lead); }
 .model-lbl[data-side="left"]::after { top: 50%; left: 100%; height: 1px; width: var(--lead); }
 .model-lbl[data-side="right"]::after { top: 50%; right: 100%; height: 1px; width: var(--lead); }
-@media (max-width: 560px) { .model-lbl { padding: 2px 4px; font-size: 0.6rem; } .model-tools { top: 8px; right: 8px; gap: 6px; } .model-btn { padding: 6px 11px; font-size: 0.8rem; } }
+@media (max-width: 560px) { .model-lbl { padding: 2px 4px; font-size: 0.6rem; } .model-tools { top: 8px; right: 8px; gap: 6px; } .model-btn { padding: 6px 11px; font-size: 0.8rem; } .model-zoom { left: 8px; top: 8px; } .model-btn.model-icon { width: 30px; height: 30px; } }
 .zoom { cursor: zoom-in; }
 .media.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .media.six .s2 { grid-column: span 2; }
@@ -324,7 +330,7 @@ dialog.lb button { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)
 <p><strong>Current progress:</strong> Gone through a preliminary design review addressing potential improvements to last year's design including modifying reservoir geometry, fluid port systems, and cylinder mechanical advantage. Tested a new dual port design through modifying last year's masters and showed reduced fluid leakage through the front seals of the master cylinder (seen in the image through the use of UV brake fluid dye). Modified the piston/pushrod stack-up to increase serviceability and decrease seal damage when assembling. Increased the force amplification from 16.739 in the Front and 8.370 in the Rear to 31.154 in the Front and 15.577 in the Rear.</p>
     </div>
     <div class="media two">
-<figure class="span"><div class="ph model3d" id="mc-model" data-src="../assets/models/master-cylinder.glb"><p class="model-msg">Loading 3D model&hellip;</p></div><figcaption>3D model &mdash; drag to rotate; Section cuts it in half, Explode pulls the parts apart</figcaption></figure>
+<figure class="span"><div class="ph model3d" id="mc-model" data-src="../assets/models/master-cylinder.glb"><p class="model-msg">Loading 3D model&hellip;</p></div><figcaption>3D model &mdash; drag to rotate, pinch or Ctrl + scroll to zoom, right-drag to pan; Section cuts it in half, Explode pulls the parts apart</figcaption></figure>
 <figure><div class="ph"><img class="zoom" src="../assets/img/mc-dual-port.jpg" width="1350" height="1800" alt="Dual port modification" loading="lazy"></div><figcaption>Dual port modification</figcaption></figure>
 <figure><div class="ph"><img class="zoom" src="../assets/img/mc-single-port.jpg" width="1350" height="1800" alt="Single port" loading="lazy"></div><figcaption>Single port</figcaption></figure>
     </div>
@@ -473,8 +479,15 @@ async function init() {
   const tools = document.createElement('div'); tools.className = 'model-tools';
   const button = text => { const b = document.createElement('button'); b.type = 'button'; b.className = 'model-btn'; b.textContent = text; b.setAttribute('aria-pressed', 'false'); tools.append(b); return b; };
   const sectionBtn = button('Section'), btn = button('Explode');
+  const zoomBar = document.createElement('div'); zoomBar.className = 'model-zoom';
+  const zoomButton = (label, svg) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'model-btn model-icon'; b.setAttribute('aria-label', label); b.title = label; b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${svg}</svg>`; zoomBar.append(b); return b; };
+  const zoomInBtn = zoomButton('Zoom in', '<path d="M12 5v14M5 12h14"/>');
+  const zoomOutBtn = zoomButton('Zoom out', '<path d="M5 12h14"/>');
+  const resetBtn = zoomButton('Fit to view', '<circle cx="12" cy="12" r="3.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>');
+  const ENTER_FULL = '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>', EXIT_FULL = '<path d="M9 4v5H4M15 4v5h5M15 20v-5h5M9 20v-5H4"/>';
+  const fullBtn = zoomButton('Full screen', ENTER_FULL);
   box.textContent = '';
-  box.append(renderer.domElement, labels, tools);
+  box.append(renderer.domElement, labels, tools, zoomBar);
 
   // Section view: everything on the camera side of this plane is cut away (x > constant)
   const clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 1e4);
@@ -603,8 +616,9 @@ async function init() {
   const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.enableZoom = false;   // keep the mouse wheel scrolling the page
-  controls.enablePan = false;
+  controls.enableZoom = false;   // zoom is handled below so a plain mouse wheel still scrolls the page
+  controls.enablePan = true;     // right-drag or two-finger drag to look around once zoomed in
+  controls.screenSpacePanning = true;
   controls.autoRotate = !reduced;
   controls.autoRotateSpeed = 1.2;
   controls.addEventListener('start', () => { controls.autoRotate = false; });
@@ -614,15 +628,17 @@ async function init() {
   const ease = x => x * x * (3 - 2 * x);
 
   // t: 0 assembled -> 1 exploded. s: 0 whole -> 1 sectioned. swing: camera turning toward the side view.
-  let t = 0, goal = 0, s = 0, sGoal = 0, swing = 1;
+  // zoom: 1 fits the whole model; larger is closer
+  let t = 0, goal = 0, s = 0, sGoal = 0, swing = 1, zoom = 1, zoomGoal = 1, recenter = false;
   const cutX = (parts.find(p => p.label === 'Piston') || housing).box.getCenter(new THREE.Vector3()).x;
   const clearX = fit[0].max.x + 1;
-  const frame = () => {
+  // keepTarget: zooming or resizing keeps any panning; explode/section/reset re-center on the model
+  const frame = keepTarget => {
     const e = ease(t);
     if (swing < 1) dir.copy(fromDir).lerp(toDir, ease(swing)).normalize();
     else if (camera.position.distanceToSquared(controls.target) > 0) dir.copy(camera.position).sub(controls.target).normalize();
-    const center = fit[0].getCenter(new THREE.Vector3()).lerp(fit[1].getCenter(new THREE.Vector3()), e);
-    const dist = THREE.MathUtils.lerp(spinDistance(fit[0], dir), fitDistance(fit[1], dir), e);
+    const center = keepTarget ? controls.target.clone() : fit[0].getCenter(new THREE.Vector3()).lerp(fit[1].getCenter(new THREE.Vector3()), e);
+    const dist = THREE.MathUtils.lerp(spinDistance(fit[0], dir), fitDistance(fit[1], dir), e) / zoom;
     controls.target.copy(center);
     camera.position.copy(center).addScaledVector(dir, dist);
     parts.forEach(p => p.mesh.position.copy(p.offset).multiplyScalar(e));
@@ -652,7 +668,57 @@ async function init() {
     if (reduced) { s = sGoal; section(); frame(); }
   });
 
-  const size = () => { const w = box.clientWidth, h = box.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); frame(); };
+  // Zoom: buttons, trackpad pinch / Ctrl+scroll, and two-finger pinch on touch screens
+  const setZoom = z => { zoomGoal = THREE.MathUtils.clamp(z, 0.7, 8); controls.autoRotate = false; if (reduced) { zoom = zoomGoal; frame(true); } };
+  zoomInBtn.addEventListener('click', () => setZoom(zoomGoal * 1.4));
+  zoomOutBtn.addEventListener('click', () => setZoom(zoomGoal / 1.4));
+  resetBtn.addEventListener('click', () => { recenter = true; setZoom(1); if (reduced) frame(false); });
+  renderer.domElement.addEventListener('wheel', ev => {
+    if (!ev.ctrlKey && !ev.metaKey) return;   // plain scrolling still scrolls the page
+    ev.preventDefault();
+    setZoom(zoomGoal * Math.exp(-ev.deltaY * 0.01));
+  }, { passive: false });
+  const touches = new Map();
+  let pinch = 0;
+  renderer.domElement.addEventListener('pointerdown', ev => { if (ev.pointerType === 'touch') touches.set(ev.pointerId, [ev.clientX, ev.clientY]); });
+  renderer.domElement.addEventListener('pointermove', ev => {
+    if (!touches.has(ev.pointerId)) return;
+    touches.set(ev.pointerId, [ev.clientX, ev.clientY]);
+    if (touches.size !== 2) return;
+    const [a, b] = [...touches.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    if (pinch) { setZoom(zoomGoal * d / pinch); zoom = zoomGoal; frame(true); }
+    pinch = d;
+  });
+  const lift = ev => { touches.delete(ev.pointerId); pinch = 0; };
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => renderer.domElement.addEventListener(n, lift));
+
+  // Full screen: the browser's Fullscreen API, or a window-filling overlay where that isn't available
+  // (iPhone Safari, or pages embedded without fullscreen permission)
+  const request = box.requestFullscreen || box.webkitRequestFullscreen;
+  const nativeOk = () => !!request && (document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  const nativeEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const isFull = () => nativeEl() === box || box.classList.contains('is-full');
+  const syncFull = () => {
+    const on = isFull();
+    fullBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${on ? EXIT_FULL : ENTER_FULL}</svg>`;
+    fullBtn.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen'); fullBtn.title = fullBtn.getAttribute('aria-label');
+    document.documentElement.style.overflow = box.classList.contains('is-full') ? 'hidden' : '';
+  };
+  const overlay = on => { box.classList.toggle('is-full', on); syncFull(); };
+  fullBtn.addEventListener('click', () => {
+    if (box.classList.contains('is-full')) overlay(false);
+    else if (nativeEl() === box) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else if (nativeOk()) {
+      // Some embedded browsers neither grant nor refuse the request, so fall back if nothing happens
+      Promise.resolve(request.call(box)).catch(() => {});
+      setTimeout(() => { if (nativeEl() !== box) overlay(true); }, 600);
+    }
+    else overlay(true);
+  });
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(n => document.addEventListener(n, syncFull));
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && box.classList.contains('is-full')) overlay(false); });
+
+  const size = () => { const w = box.clientWidth, h = box.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); frame(true); };
   new ResizeObserver(size).observe(box);
   size();
 
@@ -676,11 +742,17 @@ async function init() {
     const dt = clock.getDelta();
     if (!visible) return;
     const step = (x, to) => to > x ? Math.min(to, x + dt / 1.1) : Math.max(to, x - dt / 1.1);
-    let moved = false;
+    let moved = false, zoomed = false;
     if (t !== goal) { t = step(t, goal); moved = true; }
     if (swing < 1) { swing = step(swing, 1); moved = true; }
     if (s !== sGoal) { s = step(s, sGoal); section(); }
-    if (moved) frame();
+    if (zoom !== zoomGoal) {
+      zoom += (zoomGoal - zoom) * Math.min(1, dt * 10);
+      if (Math.abs(zoom - zoomGoal) < 1e-3) zoom = zoomGoal;
+      zoomed = true;
+    }
+    if (moved || zoomed) frame(!moved && !recenter);
+    if (recenter && zoom === zoomGoal) { frame(false); recenter = false; }
     controls.update();
     renderer.render(scene, camera);
     placeLabels();
