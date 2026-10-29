@@ -230,6 +230,9 @@ dialog.resume-dlg::backdrop { background: rgba(0, 0, 0, 0.7); }
 .proj-text { display: grid; gap: 18px; max-width: 60ch; }
 @media (min-width: 901px) { .proj-text { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 108px); } }
 .proj-text strong { font-weight: 650; }
+.proj-text .progress { margin: -8px 0 0; padding-left: 1.15em; display: grid; gap: 16px; }
+.proj-text .progress ul { margin: 6px 0 0; padding-left: 1.15em; display: grid; gap: 6px; list-style: circle; }
+.proj-text .progress li::marker { color: var(--accent); }
 .media { display: grid; gap: clamp(14px, 2vw, 22px); }
 .media.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 520px) { .media.two { grid-template-columns: minmax(0, 1fr); } }
@@ -325,9 +328,32 @@ dialog.lb button { position: fixed; top: max(12px, env(safe-area-inset-top, 0px)
   </div></section>
   <section class="proj"><div class="wrap">
     <div class="proj-text">
-<p>Last season's car suffered from brake drag and a loss of braking force, which costs speed and driver confidence over a four-hour endurance race. I'm leading the redesign of the master cylinders to fix both problems.</p>
-<p><strong>My role:</strong> Diagnosing the root causes of the prior year's drag and force loss, designing new master cylinders to address them, and manufacturing and assembling this season's cylinders.</p>
-<p><strong>Current progress:</strong> Gone through a preliminary design review addressing potential improvements to last year's design including modifying reservoir geometry, fluid port systems, and cylinder mechanical advantage. Tested a new dual port design through modifying last year's masters and showed reduced fluid leakage through the front seals of the master cylinder (seen in the image through the use of UV brake fluid dye). Modified the piston/pushrod stack-up to increase serviceability and decrease seal damage when assembling. Increased the force amplification from 16.739 in the Front and 8.370 in the Rear to 31.154 in the Front and 15.577 in the Rear.</p>
+<p>For the 2026–2027 Cornell Baja car, I'm responsible for the design, analysis, manufacturing, and assembly of our brake master cylinders. Last season's car lost braking force in 20 to 30 minutes due to fluid leakage and air entering. This is a major problem as it reduces driver confidence and leads to slower lap times.</p>
+<p>Redesigning this part involves diagnosing the root causes of last year's force loss, and increasing mechanical advantage. The goal is to reduce the necessary force to lock the brakes, increase the run time between bleeds to over 4 hours, and to improve the assembly and serviceability of the master cylinders.</p>
+<p><strong>Progress so far:</strong></p>
+<ul class="progress">
+<li><strong>Issue from last year:</strong> As the master cylinder reservoirs are jostled during rough terrain driving, fluid is sloshed around the reservoir. With last year's design, this sloshing had the potential to push air into the master cylinder.
+  <ul>
+  <li><strong>Design Change:</strong> Changed the reservoir geometry to be conical instead of rectangular</li>
+  <li><strong>Effect:</strong> As fluid sloshes the new geometry prevents the ports from being directly open to air preventing sloshing from pushing air into the cylinder</li>
+  </ul></li>
+<li><strong>Issue from last year:</strong> While the car was driving fluid would leak out of the front of the master cylinder. This could be caused by the low pressure system formed during retraction as this would cause the u-cup seal to deflect and pull fluid from the piston which would then pull air in from the outside
+  <ul>
+  <li><strong>Design Change:</strong> Added a secondary port known as the bypass port to the master cylinder allowing fluid to flow in the piston space behind the primary seal.</li>
+  <li><strong>Effect:</strong> Through UV brake dye testing we observed less fluid leakage through the mouth of the master cylinder. This design also conforms with the industry standard design for master cylinders. This change, however, does increase the complexity of the geometry of the system.</li>
+  </ul></li>
+<li><strong>Issue from last year:</strong> The necessary locking force to pass static brake check was higher than our smallest driver could achieve preventing her from passing tech.
+  <ul>
+  <li><strong>Design Change:</strong> Decrease the bore diameter of the master cylinder</li>
+  <li><strong>Effect:</strong> This increase contributed to the overall brake system mechanical advantage increase of over 100%. It also increases the necessary pressure that the cylinders need to handle. This is accounted for by increasing the thickness of each cylinder and analyzing the system in Ansys.</li>
+  </ul></li>
+<li><strong>Issue from last year:</strong> Leaking out of the reservoir seal and a failure in the function of the breather.
+  <ul>
+  <li><strong>Design Change:</strong> Switched the reservoir geometry to fit an OEM seal and cap.</li>
+  <li><strong>Effect:</strong> OEM caps have accordion seals that properly deal with the change in fluid levels in the master cylinder. This sealing method prevents excess air from entering the system and also should prevent leaking at the reservoir seal.</li>
+  </ul></li>
+</ul>
+<p><strong>Overall:</strong> Given current designs and analysis of the overall brakes system we expect the mechanical advantage to be over 2x more than last year; reducing the pedal force necessary to lock the brakes to around ~75 lbf under ideal conditions. This result is a composition of bore changes to the master cylinder, pedal geometry changes, and piston area changes on the caliper side.</p>
     </div>
     <div class="media two">
 <figure class="span"><div class="ph model3d" id="mc-model" data-src="../assets/models/master-cylinder.glb"><p class="model-msg">Loading 3D model&hellip;</p></div><figcaption>3D model &mdash; drag to rotate, pinch or Ctrl + scroll to zoom, right-drag to pan; Section cuts it in half, Explode pulls the parts apart</figcaption></figure>
